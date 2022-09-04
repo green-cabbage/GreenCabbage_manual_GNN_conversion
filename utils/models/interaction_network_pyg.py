@@ -104,25 +104,23 @@ class InteractionNetwork(MessagePassing):
         super(InteractionNetwork, self).__init__(aggr=aggr,
                                                  flow=flow)
         self.n_neurons = hidden_size
-        self.R1 = RelationalModel(10, 4, hidden_size)
-        self.O = ObjectModel(7, 3, hidden_size)
-        self.R2 = RelationalModel(10, 1, hidden_size)
-        self.res_block = ResidualBlock(3)
-        # self.out_channels = 128
-        # self.R1 = RelationalModel(self.out_channels, self.out_channels, hidden_size)
-        # self.O = ObjectModel(2*self.out_channels, self.out_channels, hidden_size)
-        # self.R2 = RelationalModel(self.out_channels, 1, hidden_size)
-        # self.res_block = ResidualBlock(self.out_channels)
-        
-        
-        # self.node_encoder = nn.Linear(3, self.out_channels)
-        # self.edge_encoder = nn.Linear(4, self.out_channels)
+        # self.R1 = RelationalModel(10, 4, hidden_size)
+        # self.O = ObjectModel(7, 3, hidden_size)
+        # self.R2 = RelationalModel(10, 1, hidden_size)
+        # self.res_block = ResidualBlock(3)
+        self.out_channels = 5#128
+        self.R1 = RelationalModel(3*self.out_channels, self.out_channels, hidden_size)
+        self.O = ObjectModel(self.out_channels, self.out_channels, hidden_size)
+        self.R2 = RelationalModel(3*self.out_channels, 1, hidden_size)
+        self.res_block = ResidualBlock(self.out_channels)
+        self.node_encoder = nn.Linear(3, self.out_channels)
+        self.edge_encoder = nn.Linear(4, self.out_channels)
 
     def forward(self, data):
         x = data.x
-        # x = self.node_encoder(x)
+        x = self.node_encoder(x)
         edge_index, edge_attr = data.edge_index, data.edge_attr
-        # edge_attr = self.edge_encoder(edge_attr)
+        edge_attr = self.edge_encoder(edge_attr)
         # print(f"edge_index: {edge_index.shape}")
         # print(f"edge_attr: {edge_attr.shape}")
         # print(f"edge_attr: {edge_attr}")
@@ -158,10 +156,11 @@ class InteractionNetwork(MessagePassing):
         return self.E
 
     def update(self, aggr_out, x):
-        c = torch.cat([x, aggr_out], dim=1)
+        # c = torch.cat([x, aggr_out], dim=1)
+        c = x + aggr_out
         residual = c
         output = self.O(c) 
-        return self.res_block(output, output) 
+        return self.res_block(residual, output) 
 
     # def update(self, aggr_out, x):
         #aggr_out is the output of the aggregate()

@@ -71,9 +71,15 @@ def truncate_edges(node_attr, edge_attr, edge_index, n_node_max, n_edge_max):
 def fix_graph_size(node_attr, edge_attr, edge_index, target, n_node_max=112, n_edge_max=148):
     # node_attr: [n_node, node_dim]
     # edge_attr: [n_edge, edge_dim]
-    # edge_index: [2, n_edge]
+    # edge_index: [n_edge, 2] # this is the correct setup
     # first remove edges that connect out-of-bound nodes
+    # print(f"node_attr: {node_attr.shape}")
+    # print(f"edge_attr: {edge_attr.shape}")
+    # print(f"edge_index: {edge_index.shape}")
+    # print(f"target: {target.shape}")
+    
     mask = edge_index[:,0].lt(n_node_max) & edge_index[:,1].lt(n_node_max)
+    # print(f"mask: {mask.shape}")
     edge_index = edge_index[mask]
     edge_attr = edge_attr[mask]
     target = target[mask]
