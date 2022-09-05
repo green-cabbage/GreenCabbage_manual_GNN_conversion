@@ -95,6 +95,30 @@ class ResidualBlock(nn.Module):
     def forward(self, h_prev, h_after):
         assert(h_prev.shape == h_after.shape)
         return h_prev+h_after
+
+class NodeEncoder(nn.Module):
+    """
+    output shape should be same as the input shape
+    """
+    def __init__(self, input_size, output_size):
+        super(NodeEncoder, self).__init__()
+        self.encoder = nn.Linear(input_size, output_size)
+
+    def forward(self, x):
+        return self.encoder(x)
+
+
+class EdgeEncoder(nn.Module):
+    """
+    output shape should be same as the input shape
+    """
+    def __init__(self, input_size, output_size):
+        super(EdgeEncoder, self).__init__()
+        self.encoder = nn.Linear(input_size, output_size)
+
+    def forward(self, x):
+        return self.encoder(x)
+
 """
 Hyeon-seo code end
 """
@@ -113,14 +137,23 @@ class InteractionNetwork(MessagePassing):
         self.O = ObjectModel(self.out_channels, self.out_channels, hidden_size)
         self.R2 = RelationalModel(3*self.out_channels, 1, hidden_size)
         self.res_block = ResidualBlock(self.out_channels)
+        # self.node_encoder = NodeEncoder(3, self.out_channels)
+        # self.edge_encoder = EdgeEncoder(4, self.out_channels)
         self.node_encoder = nn.Linear(3, self.out_channels)
         self.edge_encoder = nn.Linear(4, self.out_channels)
 
     def forward(self, data):
         x = data.x
         x = self.node_encoder(x)
+        # print(f"Node Encoder output max: {torch.max(x)}")
+        # print(f"Node Encoder output abs means: {torch.mean(torch.abs(x))}")
+        print(f"Node Encoder output mean: {torch.mean(x)}. std: {torch.std(x)}")
         edge_index, edge_attr = data.edge_index, data.edge_attr
         edge_attr = self.edge_encoder(edge_attr)
+        # print(f"Edge Encoder output max: {torch.max(edge_attr)}")
+        # print(f"Edge Encoder output abs means: {torch.mean(torch.abs(edge_attr))}")
+        print(f"Edge Encoder output mean: {torch.mean(edge_attr)}. std:{torch.std(edge_attr)}")
+        # print(f"Edge Encoder output: {edge_attr}")
         # print(f"edge_index: {edge_index.shape}")
         # print(f"edge_attr: {edge_attr.shape}")
         # print(f"edge_attr: {edge_attr}")
@@ -141,6 +174,8 @@ class InteractionNetwork(MessagePassing):
         # m2 = self.E + x_j
         # print("forwarding")
         output = self.R2(m2)
+        # print(f"R2 output max: {torch.max(output)}")
+        print(f"R2 output mean: {torch.mean(output)}, std: {torch.std(output)}")
         return torch.sigmoid(output)
 
     def message(self, x_i, x_j, edge_attr):
@@ -152,15 +187,20 @@ class InteractionNetwork(MessagePassing):
         m1 = torch.cat([x_i, x_j, edge_attr], dim=1)
         # m1 = x_j + edge_attr
         self.E = self.R1(m1)
+        # print(f"R1 output max: {torch.max(self.E)}")
+        print(f"R1 output mean: {torch.mean(self.E)}, std: {torch.std(self.E)}")
         # print("message passing")
         return self.E
 
     def update(self, aggr_out, x):
         # c = torch.cat([x, aggr_out], dim=1)
-        c = x + aggr_out
+        # c = x + aggr_out
+        c = x
         residual = c
         output = self.O(c) 
-        return self.res_block(residual, output) 
+        print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
+        return output
+        # return self.res_block(residual, output) 
 
     # def update(self, aggr_out, x):
         #aggr_out is the output of the aggregate()
