@@ -194,13 +194,13 @@ class InteractionNetwork(MessagePassing):
 
     def update(self, aggr_out, x):
         # c = torch.cat([x, aggr_out], dim=1)
-        # c = x + aggr_out
-        c = x
+        c = x + aggr_out
+        # c = x
         residual = c
         output = self.O(c) 
         print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
-        return output
-        # return self.res_block(residual, output) 
+        # return output
+        return self.res_block(residual, output) 
 
     # def update(self, aggr_out, x):
         #aggr_out is the output of the aggregate()
