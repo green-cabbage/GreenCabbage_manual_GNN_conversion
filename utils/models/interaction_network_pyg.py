@@ -128,17 +128,11 @@ class InteractionNetwork(MessagePassing):
         super(InteractionNetwork, self).__init__(aggr=aggr,
                                                  flow=flow)
         self.n_neurons = hidden_size
-        # self.R1 = RelationalModel(10, 4, hidden_size)
-        # self.O = ObjectModel(7, 3, hidden_size)
-        # self.R2 = RelationalModel(10, 1, hidden_size)
-        # self.res_block = ResidualBlock(3)
         self.out_channels = 5#128
-        self.R1 = RelationalModel(3*self.out_channels, self.out_channels, hidden_size)
+        # self.R1 = RelationalModel(3*self.out_channels, self.out_channels, hidden_size)
         self.O = ObjectModel(self.out_channels, self.out_channels, hidden_size)
         self.R2 = RelationalModel(3*self.out_channels, 1, hidden_size)
         self.res_block = ResidualBlock(self.out_channels)
-        # self.node_encoder = NodeEncoder(3, self.out_channels)
-        # self.edge_encoder = EdgeEncoder(4, self.out_channels)
         self.node_encoder = nn.Linear(3, self.out_channels)
         self.edge_encoder = nn.Linear(4, self.out_channels)
 
@@ -158,7 +152,9 @@ class InteractionNetwork(MessagePassing):
         # print(f"edge_attr: {edge_attr.shape}")
         # print(f"edge_attr: {edge_attr}")
         x_tilde = self.propagate(edge_index, x=x, edge_attr=edge_attr)
-        # print(f"x_tilde: {x_tilde.shape}")
+        # print(f"x_tilde.shape: {x_tilde.shape}")
+        # print(f"x_tilde: {x_tilde}")
+        
 
         if self.flow=='source_to_target':
             r = edge_index[1]
@@ -171,12 +167,18 @@ class InteractionNetwork(MessagePassing):
                         x_tilde[s],
                         self.E], dim=1)
         # x_j =  x_tilde[s]
-        # m2 = self.E + x_j
         # print("forwarding")
-        output = self.R2(m2)
-        # print(f"R2 output max: {torch.max(output)}")
-        print(f"R2 output mean: {torch.mean(output)}, std: {torch.std(output)}")
-        return torch.sigmoid(output)
+        # output = self.R2(m2)
+        # # print(f"R2 output max: {torch.max(output)}")
+        # print(f"R2 output mean: {torch.mean(output)}, std: {torch.std(output)}")
+        # # print(f"x_tilde[r]: {x_tilde[r]}")
+        # # print(f"x_tilde[r] shape: {x_tilde[r].shape}")
+        # output = torch.sigmoid(output.flatten())
+        
+        output = x_tilde
+        output = torch.sigmoid(output.flatten())
+        print(f"model output mean: {torch.mean(output)}, std: {torch.std(output)}")
+        return output
 
     def message(self, x_i, x_j, edge_attr):
         # x_i --> incoming
@@ -184,11 +186,11 @@ class InteractionNetwork(MessagePassing):
         # print(f"x_i: {x_i.shape}")
         # print(f"x_j: {x_j.shape}")
         # print(f"edge_attr: {edge_attr}")
-        m1 = torch.cat([x_i, x_j, edge_attr], dim=1)
-        # m1 = x_j + edge_attr
-        self.E = self.R1(m1)
+        # m1 = torch.cat([x_i, x_j, edge_attr], dim=1)
+        # self.E = self.R1(m1)
+        self.E = edge_attr
         # print(f"R1 output max: {torch.max(self.E)}")
-        print(f"R1 output mean: {torch.mean(self.E)}, std: {torch.std(self.E)}")
+        # print(f"R1 output mean: {torch.mean(self.E)}, std: {torch.std(self.E)}")
         # print("message passing")
         return self.E
 
@@ -197,10 +199,13 @@ class InteractionNetwork(MessagePassing):
         c = x + aggr_out
         # c = x
         residual = c
+        print(f"node residual: {residual}")
         output = self.O(c) 
         print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
-        # return output
-        return self.res_block(residual, output) 
+        output = self.res_block(residual, output) 
+        print(f"node update output: {output}")
+        # print(f"node update output shape: {output.shape}")
+        return output
 
     # def update(self, aggr_out, x):
         #aggr_out is the output of the aggregate()
