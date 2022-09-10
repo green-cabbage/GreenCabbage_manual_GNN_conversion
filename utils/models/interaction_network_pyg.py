@@ -141,12 +141,14 @@ class InteractionNetwork(MessagePassing):
         x = self.node_encoder(x)
         # print(f"Node Encoder output max: {torch.max(x)}")
         # print(f"Node Encoder output abs means: {torch.mean(torch.abs(x))}")
-        print(f"Node Encoder output mean: {torch.mean(x)}. std: {torch.std(x)}")
+        # print(f"Node Encoder output mean: {torch.mean(x)}. std: {torch.std(x)}")
+        # print(f"Node Encoder output {x}")
         edge_index, edge_attr = data.edge_index, data.edge_attr
         edge_attr = self.edge_encoder(edge_attr)
         # print(f"Edge Encoder output max: {torch.max(edge_attr)}")
         # print(f"Edge Encoder output abs means: {torch.mean(torch.abs(edge_attr))}")
-        print(f"Edge Encoder output mean: {torch.mean(edge_attr)}. std:{torch.std(edge_attr)}")
+        # print(f"Edge Encoder output mean: {torch.mean(edge_attr)}. std:{torch.std(edge_attr)}")
+        # print(f"Edge Encoder output {edge_attr}")
         # print(f"Edge Encoder output: {edge_attr}")
         # print(f"edge_index: {edge_index.shape}")
         # print(f"edge_attr: {edge_attr.shape}")
@@ -177,7 +179,7 @@ class InteractionNetwork(MessagePassing):
         
         output = x_tilde
         output = torch.sigmoid(output.flatten())
-        print(f"model output mean: {torch.mean(output)}, std: {torch.std(output)}")
+        # print(f"model output mean: {torch.mean(output)}, std: {torch.std(output)}")
         return output
 
     def message(self, x_i, x_j, edge_attr):
@@ -199,11 +201,12 @@ class InteractionNetwork(MessagePassing):
         c = x + aggr_out
         # c = x
         residual = c
-        print(f"node residual: {residual}")
+        # print(f"node residual: {residual}")
         output = self.O(c) 
-        print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
+        # print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
+        # print(f"O output {output}")
         output = self.res_block(residual, output) 
-        print(f"node update output: {output}")
+        # print(f"node update output: {output}")
         # print(f"node update output shape: {output.shape}")
         return output
 
