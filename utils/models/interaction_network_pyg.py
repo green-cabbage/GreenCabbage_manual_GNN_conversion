@@ -139,6 +139,7 @@ class InteractionNetwork(MessagePassing):
     def forward(self, data):
         x = data.x
         x = self.node_encoder(x)
+        
         # print(f"Node Encoder output max: {torch.max(x)}")
         # print(f"Node Encoder output abs means: {torch.mean(torch.abs(x))}")
         # print(f"Node Encoder output mean: {torch.mean(x)}. std: {torch.std(x)}")
@@ -149,10 +150,14 @@ class InteractionNetwork(MessagePassing):
         # print(f"Edge Encoder output abs means: {torch.mean(torch.abs(edge_attr))}")
         # print(f"Edge Encoder output mean: {torch.mean(edge_attr)}. std:{torch.std(edge_attr)}")
         # print(f"Edge Encoder output {edge_attr}")
-        # print(f"Edge Encoder output: {edge_attr}")
         # print(f"edge_index: {edge_index.shape}")
         # print(f"edge_attr: {edge_attr.shape}")
         # print(f"edge_attr: {edge_attr}")
+
+
+        residual = x
+        # print(f"residualBlock input1: {residual}")
+
         x_tilde = self.propagate(edge_index, x=x, edge_attr=edge_attr)
         # print(f"x_tilde.shape: {x_tilde.shape}")
         # print(f"x_tilde: {x_tilde}")
@@ -178,6 +183,9 @@ class InteractionNetwork(MessagePassing):
         # output = torch.sigmoid(output.flatten())
         
         output = x_tilde
+        # print(f"residualBlock input2: {output}")
+        output = self.res_block(residual, output) 
+        # print(f"Residual Block output: {output}")
         output = torch.sigmoid(output.flatten())
         # print(f"model output mean: {torch.mean(output)}, std: {torch.std(output)}")
         return output
@@ -200,13 +208,14 @@ class InteractionNetwork(MessagePassing):
         # c = torch.cat([x, aggr_out], dim=1)
         c = x + aggr_out
         # c = x
-        residual = c
-        # print(f"node residual: {residual}")
+        
+        # print(f"x: {x}")
+        # print(f"aggr_out: {aggr_out}")
+        # print(f"x + aggr_out: {c}")
         output = self.O(c) 
         # print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
         # print(f"O output {output}")
-        output = self.res_block(residual, output) 
-        # print(f"node update output: {output}")
+        
         # print(f"node update output shape: {output.shape}")
         return output
 
