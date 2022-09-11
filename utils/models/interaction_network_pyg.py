@@ -7,20 +7,20 @@ import torch_geometric.transforms as T
 from torch_geometric.nn import MessagePassing
 from torch.nn import Sequential as Seq, Linear, ReLU, Sigmoid
 
-class RelationalModel(nn.Module):
-    def __init__(self, input_size, output_size, hidden_size):
-        super(RelationalModel, self).__init__()
+# class RelationalModel(nn.Module):
+#     def __init__(self, input_size, output_size, hidden_size):
+#         super(RelationalModel, self).__init__()
 
-        self.layers = nn.Sequential(
-            nn.Linear(input_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, output_size),
-        )
+#         self.layers = nn.Sequential(
+#             nn.Linear(input_size, hidden_size),
+#             nn.ReLU(),
+#             nn.Linear(hidden_size, hidden_size),
+#             nn.ReLU(),
+#             nn.Linear(hidden_size, output_size),
+#         )
 
-    def forward(self, m):
-        return self.layers(m)
+#     def forward(self, m):
+#         return self.layers(m)
 
 class ObjectModel(nn.Module):
     def __init__(self, input_size, output_size, hidden_size):
@@ -28,9 +28,7 @@ class ObjectModel(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Linear(input_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(hidden_size, output_size),
         )
 
@@ -131,7 +129,7 @@ class InteractionNetwork(MessagePassing):
         self.out_channels = 5#128
         # self.R1 = RelationalModel(3*self.out_channels, self.out_channels, hidden_size)
         self.O = ObjectModel(self.out_channels, self.out_channels, hidden_size)
-        self.R2 = RelationalModel(3*self.out_channels, 1, hidden_size)
+        # self.R2 = RelationalModel(3*self.out_channels, 1, hidden_size)
         self.res_block = ResidualBlock(self.out_channels)
         self.node_encoder = nn.Linear(3, self.out_channels)
         self.edge_encoder = nn.Linear(4, self.out_channels)
