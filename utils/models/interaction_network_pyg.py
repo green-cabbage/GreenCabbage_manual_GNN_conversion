@@ -28,6 +28,7 @@ class ObjectModel(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Linear(input_size, hidden_size),
+            nn.BatchNorm1d(hidden_size),
             nn.LeakyReLU(),
             nn.Linear(hidden_size, output_size),
         )
@@ -133,6 +134,7 @@ class InteractionNetwork(MessagePassing):
         self.res_block = ResidualBlock(self.out_channels)
         self.node_encoder = nn.Linear(3, self.out_channels)
         self.edge_encoder = nn.Linear(4, self.out_channels)
+        # print("nodeblock state dict: ", self.O.state_dict)
 
     def forward(self, data):
         x = data.x
@@ -210,7 +212,12 @@ class InteractionNetwork(MessagePassing):
         # print(f"x: {x}")
         # print(f"aggr_out: {aggr_out}")
         # print(f"x + aggr_out: {c}")
-        output = self.O(c) 
+        # output = self.O(c) 
+        output = c
+        for layer in self.O.layers:
+            output = layer(output)
+            # print(f"layer {layer} output: {output}")
+
         # print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
         # print(f"O output {output}")
         
