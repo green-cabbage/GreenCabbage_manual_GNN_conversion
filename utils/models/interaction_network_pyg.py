@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch_geometric.transforms as T
 from torch_geometric.nn import MessagePassing
 from torch.nn import Sequential as Seq, Linear, ReLU, Sigmoid
+from torch_scatter import scatter, scatter_softmax
 
 # class RelationalModel(nn.Module):
 #     def __init__(self, input_size, output_size, hidden_size):
@@ -135,6 +136,8 @@ class InteractionNetwork(MessagePassing):
         self.node_encoder = nn.Linear(3, self.out_channels)
         self.edge_encoder = nn.Linear(4, self.out_channels)
         # print("nodeblock state dict: ", self.O.state_dict)
+        self.beta = 0.01
+        torch.set_printoptions(precision=8)
 
     def forward(self, data):
         x = data.x
@@ -204,6 +207,34 @@ class InteractionNetwork(MessagePassing):
         # print("message passing")
         return self.E
 
+
+
+    def aggregate(self, inputs, index, dim_size = None):
+        # print(f"inputs: {inputs}")
+        # print(f"max abs inputs: {torch.max(torch.abs(inputs))}")
+        # print(f"self.node_dim: {self.node_dim}")
+        # print(f"index: {index}")
+        out = scatter_softmax(inputs * self.beta, index, dim=self.node_dim)
+        # print(f"out: {out}")
+        
+        # for test_index in index:
+        #     # test_index = 8
+        #     # print(f"test_index: {test_index}")
+        #     test = inputs[index == test_index]
+        #     # print(f"test: {test}")
+        #     test_softmax = nn.Softmax(dim=0)(test)
+        #     # print(f"test softmax: {test_softmax}")
+        #     # print(f"out: {out[index == test_index]}")
+        #     print(f"are they same? : {torch.all(test_softmax == out[index == test_index])}")
+        #     # print(f"how many are they different? : {torch.sum(test_softmax != out[index == test_index])}")
+        #     print(f"how much are they different? : {torch.sum(torch.abs(test_softmax - out[index == test_index]))}")
+
+        # print(f"inputs * out: {inputs * out}")
+        output = scatter(inputs * out, index, dim=self.node_dim,
+                        dim_size=dim_size, reduce='sum')
+        # print(f"output: {output}")
+        return output
+
     def update(self, aggr_out, x):
         # c = torch.cat([x, aggr_out], dim=1)
         c = x + aggr_out
@@ -215,7 +246,12 @@ class InteractionNetwork(MessagePassing):
         # output = self.O(c) 
         output = c
         for layer in self.O.layers:
+            output_old = output
             output = layer(output)
+            # if layer.__class__.__name__ == 'BatchNorm1d':
+                # print(f"BatchNorm1d input: {output_old}")
+                # print(f"BatchNorm1d output: {output}")
+            
             # print(f"layer {layer} output: {output}")
 
         # print(f"O output mean: {torch.mean(output)}, std: {torch.std(output)}")
