@@ -136,7 +136,8 @@ class InteractionNetwork(MessagePassing):
         self.node_encoder = nn.Linear(3, self.out_channels)
         self.edge_encoder = nn.Linear(4, self.out_channels)
         # print("nodeblock state dict: ", self.O.state_dict)
-        self.beta = 0.01
+        self.beta = 0.01 # inverse temperature for softmax aggr. Has to match with hls version
+        self.eps = 1e-07 # for message passing
         torch.set_printoptions(precision=8)
 
     def forward(self, data):
@@ -161,6 +162,10 @@ class InteractionNetwork(MessagePassing):
         residual = x
         # print(f"residualBlock input1: {residual}")
 
+        # print(f"node attr: {x}")
+        # print(f"attempt at x_j: {x[edge_index[0]]}")
+        # print(f"edge_index[0]: {edge_index[0]}")
+        # print(f"edge_index[1]: {edge_index[1]}")
         x_tilde = self.propagate(edge_index, x=x, edge_attr=edge_attr)
         # print(f"x_tilde.shape: {x_tilde.shape}")
         # print(f"x_tilde: {x_tilde}")
@@ -173,9 +178,9 @@ class InteractionNetwork(MessagePassing):
             r = edge_index[0]
             s = edge_index[1]
 
-        m2 = torch.cat([x_tilde[r],
-                        x_tilde[s],
-                        self.E], dim=1)
+        # m2 = torch.cat([x_tilde[r],
+        #                 x_tilde[s],
+        #                 self.E], dim=1)
         # x_j =  x_tilde[s]
         # print("forwarding")
         # output = self.R2(m2)
@@ -194,20 +199,27 @@ class InteractionNetwork(MessagePassing):
         return output
 
     def message(self, x_i, x_j, edge_attr):
-        # x_i --> incoming
-        # x_j --> outgoing        
+        # x_i --> incoming, target
+        # x_j --> outgoing, source        
         # print(f"x_i: {x_i.shape}")
         # print(f"x_j: {x_j.shape}")
         # print(f"edge_attr: {edge_attr}")
         # m1 = torch.cat([x_i, x_j, edge_attr], dim=1)
-        # self.E = self.R1(m1)
-        self.E = edge_attr
         # print(f"R1 output max: {torch.max(self.E)}")
         # print(f"R1 output mean: {torch.mean(self.E)}, std: {torch.std(self.E)}")
+        # print(f"x_j: {x_j}")
+        # print(f"edge_attr: {edge_attr}")
+        msg = x_j + edge_attr
+        # print(f"x_j + edge_attr: {msg}")
+        msg = F.relu(msg) + self.eps
+        # print(f"msg after: {msg}")
         # print("message passing")
-        return self.E
+        return msg
 
-
+    # def message(self, x_j: Tensor, edge_attr: OptTensor, edge_atten=None) -> Tensor:
+    #     msg = x_j if edge_attr is None else x_j + edge_attr
+    #     msg = F.relu(msg) + self.eps
+    #     return msg
 
     def aggregate(self, inputs, index, dim_size = None):
         # print(f"inputs: {inputs}")
@@ -232,7 +244,8 @@ class InteractionNetwork(MessagePassing):
         # print(f"inputs * out: {inputs * out}")
         output = scatter(inputs * out, index, dim=self.node_dim,
                         dim_size=dim_size, reduce='sum')
-        # print(f"output: {output}")
+        # print(f"aggregate output: {output}")
+        # print(f"aggregating")
         return output
 
     def update(self, aggr_out, x):
@@ -258,6 +271,7 @@ class InteractionNetwork(MessagePassing):
         # print(f"O output {output}")
         
         # print(f"node update output shape: {output.shape}")
+        # print("updating")
         return output
 
     # def update(self, aggr_out, x):
